@@ -1,7 +1,7 @@
 /*
  * Program: Musical chairs game with n players and m intervals.
- * Authors:  Vedant Singh, Shreyas Jayant Havaldar 
- * Roll# :  CS18BTECH11047, CS18BTECH11042
+ * Authors: Vedant Singh, Shreyas Jayant Havaldar 
+ * Roll# : CS18BTECH11047, CS18BTECH11042
  */
 
 #include <stdlib.h>  /* for exit, atoi */
@@ -10,24 +10,28 @@
 #include <getopt.h>  /* for getopt */
 #include <assert.h>  /* for assert */
 #include <chrono>	/* for timers */
+#include <mutex>
+using namespace std;
 
+int nplayers;
+int dead = 0;
+int player_count=0;
+int num_chairs;
 
-/*
- * Forward declarations
- */
+mutex music_start, music_end, player;
+
+mutex *chair;
 
 void usage(int argc, char *argv[]);
 unsigned long long musical_chairs(int nplayers);
 
 using namespace std;
 
-
 int main(int argc, char *argv[])
 {
     int c;
-	int nplayers = 0;
+	//int nplayers = 0;
 
-    /* Loop through each option (and its's arguments) and populate variables */
     while (1) {
         int this_option_optind = optind ? optind : 1;
         int option_index = 0;
@@ -73,6 +77,9 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+    chair = (mutex*)malloc(nplayers * sizeof(mutex));
+    num_chairs = nplayers - 1;
+
     unsigned long long game_time;
 	game_time = musical_chairs(nplayers);
 
@@ -81,9 +88,6 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
 }
 
-/*
- * Show usage of the program
- */
 void usage(int argc, char *argv[])
 {
     cerr << "Usage:\n";
@@ -93,15 +97,47 @@ void usage(int argc, char *argv[])
 
 void umpire_main(int nplayers)
 {
-    /* Add your code here */
-	/* read stdin only from umpire */
+    int instr;
+
+    if(instr == 1) {
+        music_end.lock();
+        music_start.unlock();
+    }
+    if(instr == 2) {
+        music_end.unlock();
+        music_start.lock();
+    }
+
 	return;
 }
 
 void player_main(int plid)
 {
-    /* Add your code here */
-	/* synchronize stdouts coming from multiple players */
+    sleep(s[plid]);
+    player.lock();
+    player_count++;
+    if(player_count == 0) music.lock();
+    player.unlock();
+    bool alive = false;
+    int i = rand() % num_chairs;
+    int j = i;
+
+    do{
+        if (chair[j].try_lock()) {
+            if(c[j] != -1) {
+                c[j] = plid;
+                alive = true;
+            }
+            chair[j].unlock();
+        }
+        j = (j + 1) % num_chairs;
+    }while(j != i);
+
+    if (alive == false) dead = plid;
+    player.lock();
+    player_count--;
+    if(player_count == 0) music.unlock();
+    player.unlock();
 	return;
 }
 
@@ -121,4 +157,3 @@ unsigned long long musical_chairs(int nplayers)
 
 	return d1.count();
 }
-
