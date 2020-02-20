@@ -1,6 +1,6 @@
 /*
  * Program: Musical chairs game with n players and m intervals.
- * Authors: Vedant Singh, Shreyas Jayant Havaldar 
+ * Authors: Vedant Singh, Shreyas Jayant Havaldar
  * Roll# : CS18BTECH11047, CS18BTECH11042
  */
 
@@ -12,6 +12,7 @@
 #include <chrono>	/* for timers */
 #include <mutex>
 #include <condition_variable>
+#imclude <thread>
 using namespace std;
 
 int nplayers;
@@ -148,7 +149,7 @@ void umpire_main(int nplayers)
 
     }
 
-    if(nplayers == 1) // print winner 
+    if(nplayers == 1) // print winner
 	return;
 }
 
@@ -194,9 +195,16 @@ unsigned long long musical_chairs(int nplayers)
 {
 	auto t1 = chrono::steady_clock::now();
 
+    thread umpire (umpire_main, nplayers);
+
 	// Spawn umpire thread.
     /* Add your code here */
-
+    thread players[nplayers];
+    for (int i=0; i<nplayers; i++) {
+        players[i] = thread(player_main, i);
+    }
+    umpire.join();
+    for (auto& p:players) p.join();
 	// Spawn n player threads.
     /* Add your code here */
 
