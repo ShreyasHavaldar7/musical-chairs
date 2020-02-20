@@ -11,14 +11,23 @@
 #include <assert.h>  /* for assert */
 #include <chrono>	/* for timers */
 #include <mutex>
+#include <condition_variable>
 using namespace std;
 
 int nplayers;
-int dead = 0;
+int ready = 0, fuck = 0;
+int dead;
 int player_count=0;
 int num_chairs;
 
-mutex music_start, music_end, player;
+mutex music_start, music_end, player, creation, mus, count_mutex;
+mutex l_s_mutex, m_s_mutex, m_e_mutex, l_e_mutex;
+unique_lock<mutex> l_s_lck(l_s_mutex);
+unique_lock<mutex> m_s_lck(m_s_mutex);
+unique_lock<mutex> m_e_lck(m_e_mutex);
+unique_lock<mutex> l_e_lck(l_e_mutex);
+condition_variable l_s, m_s, m_e, l_e;
+bool *chair_array;
 
 mutex *chair;
 
@@ -78,6 +87,11 @@ int main(int argc, char *argv[])
 	}
 
     chair = (mutex*)malloc(nplayers * sizeof(mutex));
+    chair_array = (bool*)malloc((nplayers - 1) * sizeof(bool));
+    for(int i = 0;i < nplayers - 1;i++) {
+        chair_array[i] = false;
+    }
+
     num_chairs = nplayers - 1;
 
     unsigned long long game_time;
@@ -97,47 +111,82 @@ void usage(int argc, char *argv[])
 
 void umpire_main(int nplayers)
 {
+    // [0 : lap start, 1: lap end, 2 : mus start, 3:mus end]
+    // l_s, l_e, m_s, m_e
     int instr;
+    while(nplayers >= 1) {
+        cin >> instr;
+        if(instr == 0) {
+            m_s.wait(m_s_lck);
+            while(ready < nplayers);
+            l_s.notify_all();
+        }
 
-    if(instr == 1) {
-        music_end.lock();
-        music_start.unlock();
-    }
-    if(instr == 2) {
-        music_end.unlock();
-        music_start.lock();
+        if(instr == 2) {
+            m_e.wait(m_e_lck);
+            m_s.notify_all();
+        }
+
+        if(instr == 3) {
+            l_e.wait(l_e_lck);
+            m_e.notify_all();
+            cout << dead;
+            nplayers--;
+            num_chairs--;
+            for(int i = 0;i < nplayers - 1;i++) {
+                chair_array[i] = false;
+            }
+        }
+
+        if(instr == 1) {
+            l_s.wait(l_s_lck);
+            while(nplayers > fuck);
+            ready = 0;
+            l_e.notify_all();
+            fuck = 0;
+        }
+
     }
 
+    if(nplayers == 1) // print winner 
 	return;
 }
 
 void player_main(int plid)
 {
-    sleep(s[plid]);
-    player.lock();
-    player_count++;
-    if(player_count == 0) music.lock();
-    player.unlock();
-    bool alive = false;
-    int i = rand() % num_chairs;
-    int j = i;
+    bool alive = true;
+    while(alive) {
+        count_mutex.lock();
+        ready++;
+        count_mutex.unlock();
+        l_s.wait(l_s_lck);
+        m_s.wait(m_s_lck);
+        //sleep(s[plid]);
+        m_e.wait(m_e_lck);
+        int i = rand() % num_chairs;
+        int j = i;
 
-    do{
-        if (chair[j].try_lock()) {
-            if(c[j] != -1) {
-                c[j] = plid;
-                alive = true;
+        do{
+            if (chair[j].try_lock()) {
+                if(chair_array[j] == false) {
+                    chair_array[j] = true;
+                    alive = true;
+                    break;
+                }
+                chair[j].unlock();
             }
-            chair[j].unlock();
-        }
-        j = (j + 1) % num_chairs;
-    }while(j != i);
+            j = (j + 1) % num_chairs;
+        }while(j != i);
 
-    if (alive == false) dead = plid;
-    player.lock();
-    player_count--;
-    if(player_count == 0) music.unlock();
-    player.unlock();
+        if (j == i) {
+            alive = false;
+            dead = plid;
+        }
+        count_mutex.lock();
+        fuck++;
+        count_mutex.unlock();
+        l_e.wait(l_e_lck);
+    }
 	return;
 }
 
