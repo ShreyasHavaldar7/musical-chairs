@@ -212,4 +212,4 @@ unsigned long long musical_chairs(int nplayers)
 	auto d1 = chrono::duration_cast<chrono::microseconds>(t2 - t1);
 
 	return d1.count();
-}
+} // NOOOOOOOOOB
