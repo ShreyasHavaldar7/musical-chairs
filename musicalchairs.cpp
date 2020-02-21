@@ -12,11 +12,11 @@
 #include <chrono>	/* for timers */
 #include <mutex>
 #include <condition_variable>
-#imclude <thread>
+#include <thread>
 using namespace std;
 
 int nplayers;
-int ready = 0, fuck = 0;
+int ready_count = 0, end_count = 0;
 int dead;
 int player_count=0;
 int num_chairs;
@@ -119,7 +119,7 @@ void umpire_main(int nplayers)
         cin >> instr;
         if(instr == 0) {
             m_s.wait(m_s_lck);
-            while(ready < nplayers);
+            while(ready_count < nplayers);
             l_s.notify_all();
         }
 
@@ -141,10 +141,9 @@ void umpire_main(int nplayers)
 
         if(instr == 1) {
             l_s.wait(l_s_lck);
-            while(nplayers > fuck);
-            ready = 0;
+            while(nplayers > end_count);
+            ready_count = 0;
             l_e.notify_all();
-            fuck = 0;
         }
 
     }
@@ -158,7 +157,7 @@ void player_main(int plid)
     bool alive = true;
     while(alive) {
         count_mutex.lock();
-        ready++;
+        ready_count++;
         count_mutex.unlock();
         l_s.wait(l_s_lck);
         m_s.wait(m_s_lck);
@@ -184,7 +183,7 @@ void player_main(int plid)
             dead = plid;
         }
         count_mutex.lock();
-        fuck++;
+        end_count++;
         count_mutex.unlock();
         l_e.wait(l_e_lck);
     }
@@ -195,7 +194,7 @@ unsigned long long musical_chairs(int nplayers)
 {
 	auto t1 = chrono::steady_clock::now();
 
-    thread umpire (umpire_main, nplayers);
+    thread umpire = (umpire_main, nplayers);
 
 	// Spawn umpire thread.
     /* Add your code here */
