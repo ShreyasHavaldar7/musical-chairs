@@ -33,7 +33,7 @@ bool *chair_array;
 mutex *chair;
 
 void usage(int argc, char *argv[]);
-unsigned long long musical_chairs(int nplayers);
+unsigned long long musical_chairs();
 
 using namespace std;
 
@@ -110,7 +110,7 @@ void usage(int argc, char *argv[])
     exit(EXIT_FAILURE);
 }
 
-void umpire_main(int nplayers)
+void umpire_main()
 {
     // [0 : lap start, 1: lap end, 2 : mus start, 3:mus end]
     // l_s, l_e, m_s, m_e
@@ -190,11 +190,12 @@ void player_main(int plid)
 	return;
 }
 
-unsigned long long musical_chairs(int nplayers)
+unsigned long long musical_chairs()
 {
 	auto t1 = chrono::steady_clock::now();
 
-    thread umpire = (umpire_main, nplayers);
+    thread umpire;
+    umpire = thread (umpire_main);
 
 	// Spawn umpire thread.
     /* Add your code here */
