@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     num_chairs = nplayers - 1;
 
     unsigned long long game_time;
-	game_time = musical_chairs(nplayers);
+	game_time = musical_chairs();
 
     cout << "Time taken for the game: " << game_time << " us" << endl;
 
@@ -203,9 +203,11 @@ unsigned long long musical_chairs()
     for (int i=0; i<nplayers; i++) {
         players[i] = thread(player_main, i);
     }
-    umpire.join();
-    for (auto& p:players) p.join();
+    for (int i=0; i<nplayers; i++) {
+        players[i].join();
+    };
 	// Spawn n player threads.
+    umpire.join();
     /* Add your code here */
 
 	auto t2 = chrono::steady_clock::now();
