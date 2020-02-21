@@ -28,7 +28,9 @@ unique_lock<mutex> m_s_lck(m_s_mutex);
 unique_lock<mutex> m_e_lck(m_e_mutex);
 unique_lock<mutex> l_e_lck(l_e_mutex);
 condition_variable l_s, m_s, m_e, l_e;
+
 bool *chair_array;
+bool *isalive;
 
 mutex *chair;
 
@@ -87,10 +89,14 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-    chair = (mutex*)malloc(nplayers * sizeof(mutex));
+    chair = (mutex*)malloc((nplayers - 1) * sizeof(mutex));
+    isalive = (bool*)malloc(nplayers * sizeof(bool));
     chair_array = (bool*)malloc((nplayers - 1) * sizeof(bool));
     for(int i = 0;i < nplayers - 1;i++) {
         chair_array[i] = false;
+    }
+    for(int i = 0;i < nplayers;i++) {
+        chair_array[i] = true;
     }
 
     num_chairs = nplayers - 1;
@@ -148,7 +154,15 @@ void umpire_main()
 
     }
 
-    if(nplayers == 1) // print winner
+    if(nplayers == 1) {
+        for(int i = 0;i < nplayers;i++) {
+            if (isalive[i] == true) {
+                cout << "Winner :" << i << "\n";
+                break;
+            }
+        }
+    }
+
 	return;
 }
 
@@ -181,6 +195,7 @@ void player_main(int plid)
         if (j == i) {
             alive = false;
             dead = plid;
+            isalive[plid] = false;
         }
         count_mutex.lock();
         end_count++;
@@ -215,4 +230,4 @@ unsigned long long musical_chairs()
 	auto d1 = chrono::duration_cast<chrono::microseconds>(t2 - t1);
 
 	return d1.count();
-} // NOOOOOOOOOB
+} 
