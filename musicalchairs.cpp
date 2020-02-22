@@ -14,6 +14,7 @@
 #include <condition_variable>
 #include <sstream>
 #include <thread>
+#include <atomic>
 using namespace std;
 int nplayers;
 int fuck = 0;
@@ -275,7 +276,7 @@ void player_main(int plid)
                 ch[j].clear();
             }
             if (got_chair) break;
-            else j = (j + 1) % num_chairs; 
+            else j = (j + 1) % num_chairs;
         }while(j != i);
         if(!got_chair) {
             alive = false;
