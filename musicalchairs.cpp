@@ -12,6 +12,7 @@
 #include <chrono>	/* for timers */
 #include <mutex>
 #include <condition_variable>
+#include <sstream>
 #include <thread>
 using namespace std;
 
@@ -31,6 +32,7 @@ condition_variable l_s, m_s, m_e, l_e;
 
 bool *chair_array;
 bool *isalive;
+int* sleep;
 
 mutex *chair;
 
@@ -96,7 +98,7 @@ int main(int argc, char *argv[])
         chair_array[i] = false;
     }
     for(int i = 0;i < nplayers;i++) {
-        chair_array[i] = true;
+        isalive[i] = true;
     }
 
     num_chairs = nplayers - 1;
@@ -120,37 +122,84 @@ void umpire_main()
 {
     // [0 : lap start, 1: lap end, 2 : mus start, 3:mus end]
     // l_s, l_e, m_s, m_e
-    int instr;
-    while(nplayers >= 1) {
-        cin >> instr;
-        if(instr == 0) {
+    string inst; int lap_no=1;
+    while(nplayers > 1) {
+        getline(cin, inst);
+
+        if(inst.compare("lap_start") == 0) {
+            cout << "======= lap# "<< lap_no << " =======\n";
+
+            for (int i = 0; i <nplayers; i++) {
+                sleep[i] = 0;
+            }
+            for(int i = 0;i < nplayers-1;i++) {
+                chair_array[i] = true;
+            }
+
+
+
             m_s.wait(m_s_lck);
             while(ready_count < nplayers);
             l_s.notify_all();
         }
 
-        if(instr == 2) {
-            m_e.wait(m_e_lck);
-            m_s.notify_all();
+        getline(cin, inst);
+        stringstream S(inst);
+        string s;
+        getline(S, s, ' ');
+
+        if(s.compare("player_sleep") == 0) {
+            int p_id;
+
+            do {
+                getline(S, s, ' ');
+                p_id = stoi(s);
+                getline(S, s, ' ');
+                sleep[p_id] = stoi(s);
+
+                getline(cin, inst);
+                S.str(inst);
+                S.clear();
+                getline(S, s, ' ');
+            } while (s.compare("player_sleep") == 0);
         }
 
-        if(instr == 3) {
+        if(inst.compare("music_start") == 0) {
+
+            getline(cin, inst);
+            S.clear();
+            S.str(inst);
+            getline(S, s, ' ');
+
+            if(s.compare("umpire_sleep") == 0) {
+
+                getline(S, s, ' ');
+                this_thread::sleep_for(chrono::microseconds(stoi(s)));
+                getline(cin, inst);
+            }
+        }
+
+        if(inst.compare("music_stop") == 0) {
+
             l_e.wait(l_e_lck);
             m_e.notify_all();
-            cout << dead;
+            //cout << dead;
             nplayers--;
             num_chairs--;
             for(int i = 0;i < nplayers - 1;i++) {
                 chair_array[i] = false;
             }
+            getline(cin, inst);
         }
 
-        if(instr == 1) {
+        if(inst.compare("lap_stop") == 0) {
             l_s.wait(l_s_lck);
             while(nplayers > end_count);
             ready_count = 0;
             l_e.notify_all();
+            cout << "**********************\n";
         }
+        lap_no++;
 
     }
 
@@ -173,7 +222,9 @@ void player_main(int plid)
         count_mutex.lock();
         ready_count++;
         count_mutex.unlock();
+
         l_s.wait(l_s_lck);
+
         m_s.wait(m_s_lck);
         //sleep(s[plid]);
         m_e.wait(m_e_lck);
@@ -230,4 +281,4 @@ unsigned long long musical_chairs()
 	auto d1 = chrono::duration_cast<chrono::microseconds>(t2 - t1);
 
 	return d1.count();
-} 
+}
