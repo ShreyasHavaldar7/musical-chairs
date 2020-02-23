@@ -3,3 +3,13 @@ music_start
 umpire_sleep 2000000
 music_stop
 lap_stop
+lap_start
+music_start
+umpire_sleep 2000000
+music_stop
+lap_stop
+lap_start
+music_start
+umpire_sleep 2000000
+music_stop
+lap_stop
