@@ -16,6 +16,7 @@
 #include <thread>
 #include <atomic>
 using namespace std;
+atomic<int> running;
 int nplayers;
 int fuck = 0;
 std::atomic<int> ready_count;
@@ -37,6 +38,12 @@ std::atomic<bool> *isalive;
 int *sl;
 std::atomic_flag *ch;
 mutex *chair;
+mutex mtx, mtx1, mtx2, mtx3;
+std::condition_variable cv1, cv2, cv3;
+int *ready;
+mutex all_ready_mutex;
+int all_ready = 0;
+int *seat, *sleepers;
 
 void usage(int argc, char *argv[]);
 unsigned long long musical_chairs();
@@ -92,35 +99,10 @@ int main(int argc, char *argv[])
 		cerr << "Invalid nplayers argument." << endl;
 		return EXIT_FAILURE;
 	}
-    //std::mutex xy[10];
-
-    //for(int i = 0;i < 10;i++) {
-        //cout <<  "before : " << xy[i].try_lock() << "\n";
-        ////if(i % 2 == 0) xy[i].lock();
-         //xy[i].unlock();
-        //cout << "after : " << xy[i].try_lock() << "\n";
-    //}
-    //chair = (mutex*)malloc((nplayers - 1) * sizeof(mutex));
-    //for(int i = 0;i < nplayers - 1;i++) {
-        //cout <<  "before : " << chair[i].try_lock() << "\n";
-        //chair[i].unlock();
-        //cout << "after : " << chair[i].try_lock() << "\n";
-    //}
-    //for(int i = 0;i < nplayers - 1;i++) {
-        //chair[i] = new mutex;
-    //}
-    //cout << typeof(chair) << "\n";
     ch = (std::atomic_flag*)malloc((nplayers - 1) * sizeof(std::atomic_flag));
     isalive = (std::atomic<bool>*)malloc(nplayers * sizeof(bool));
     chair_array = (std::atomic<bool>*)malloc((nplayers - 1) * sizeof(bool));
     sl = (int*)malloc(nplayers * sizeof(int));
-    //for(int i = 0;i < nplayers - 1;i++) {
-        //cout << "value : " << ch[i].test_and_set() << "\n";
-        //cout << "value : " << ch[i].test_and_set() << "\n";
-        //ch[i].clear();
-        //cout << "value : " << ch[i].test_and_set() << "\n";
-
-    //}
     for(int i = 0;i < nplayers - 1;i++) {
         chair_array[i] = false;
     }
@@ -129,6 +111,7 @@ int main(int argc, char *argv[])
     }
 
     num_chairs = nplayers - 1;
+//    n_searching = 0;
 
     unsigned long long game_time;
     ready_count = 0;
@@ -151,8 +134,16 @@ void umpire_main()
 {
     cout <<"Musical Chairs: "<< nplayers <<" player game with "<< nplayers-1 << " laps.\n";
     string inst; int lap_no=1;
+    cout << mtx.try_lock();
+    std::unique_lock<std::mutex> all_ready_lck(all_ready_mutex);
+    
+    while(!all_ready) {
+        cv1.wait(all_ready_lck);
+    }
+    
     while(nplayers > 1) {
-        m_s_mutex.lock();
+        
+        running = nplayers;
         getline(cin, inst);
 
         if(inst.compare("lap_start") == 0) {
@@ -160,14 +151,19 @@ void umpire_main()
             for(int i = 0;i < nplayers - 1;i++) {
                 chair_array[i] = false;
             }
+            std::unique_lock<std::mutex> lk3(mtx3);
+            for (int i = 0; i < nplayers; i++)
+            {
+                ready[i] = 1;
+                sleepers[i] = 0;
+            }
+            lk3.unlock();
+            cv3.notify_all();
             cout << "======= lap# "<< lap_no << " =======\n";
 
             for (int i = 0; i <nplayers; i++) {
                 sl[i] = 0;
             }
-            //for(int i = 0;i < nplayers-1;i++) {
-                //chair_array[i] = true;
-            //}
 
             while(ready_count < nplayers);
         }
@@ -193,14 +189,8 @@ void umpire_main()
             } while (s.compare("player_sleep") == 0);
         }
 
-        //for(int i = 0;i < nplayers;i++) {
-            //cout << sl[i] << " ";
-        //}
-        //cout << "\n";
-
         if(inst.compare("music_start") == 0) {
 
-            m_s_mutex.unlock();
             getline(cin, inst);
             S.clear();
             S.str(inst);
@@ -215,21 +205,16 @@ void umpire_main()
         }
 
         if(inst.compare("music_stop") == 0) {
-            {
-                std::lock_guard<std::mutex> m_e_lck(m_e_mutex);
-                music_end = 1;
-            }
-            m_e.notify_all();
+            mtx.unlock();
             getline(cin, inst);
         }
 
         if(inst.compare("lap_stop") == 0) {
-            //m_s_mutex.lock();
-            while(nplayers + 1 > end_count) continue;
-            ready_count = 0;
-            end_count = 0;
-            //l_e.notify_all();
-            //cout << dead << "\n";
+            std::unique_lock<std::mutex> lk2(mtx2);
+            while (running != 0)
+                cv2.wait(lk2);
+            mtx.lock();
+
             cout << "**********************\n";
         }
         lap_no++;
@@ -250,41 +235,50 @@ void umpire_main()
 void player_main(int plid)
 {
     bool alive = true;
-    bool got_chair = false;
-    while(alive & !got_chair) {
-        if(num_chairs == 0) return;
+//    cout << alive << "\n";
+    while(true) {
+        
+        std::unique_lock<std::mutex> lk3(mtx3);
+        while (!ready[plid]) cv3.wait(lk3);
+        lk3.unlock();
+        
         srand(time(0));
-        ready_count += 1;
-        std::unique_lock<std::mutex> m_s_lock(m_s_mutex, std::defer_lock);
-        m_s_mutex.lock();
-        m_s_mutex.unlock();
-        this_thread::sleep_for(chrono::microseconds(sl[plid]));
-        std::unique_lock<std::mutex> m_e_lock(m_e_mutex, std::defer_lock);
-        m_e_lock.lock();
-        m_e.wait(m_e_lock, [](){return music_end;});
+        
+        mtx.lock();
+        if (sleepers[plid] != 0) {
+            mtx.unlock();
+            this_thread::sleep_for(chrono::microseconds(sl[plid]));
+        }
+        else mtx.unlock();
+        bool got_chair = false;
+        
         int i = rand() % num_chairs;
         int j = i;
         do{
-            //cout << ch[j].test_and_set();
-            //ch[j].clear();
             if (!ch[j].test_and_set()) {
                 if(!chair_array[j]) {
                     chair_array[j] = true;
                     cout << plid << " got chair: " << j << "\n";
                     got_chair = true;
-                    //alive = true;
                 }
                 ch[j].clear();
             }
             if (got_chair) break;
             else j = (j + 1) % num_chairs;
         }while(j != i);
+        
+        ready[plid] = 0;
+        running -= 1;
+        
         if(!got_chair) {
             alive = false;
             cout << plid << " died \n";
-            nplayers--;
-            num_chairs--;
             isalive[plid] = false;
+            return;
+        } else {
+            if(nplayers == 2)  {
+                cout << plid << " won \n";
+            }
         }
         end_count += 1;
     }
@@ -294,6 +288,8 @@ void player_main(int plid)
 unsigned long long musical_chairs()
 {
 	auto t1 = chrono::steady_clock::now();
+    ready = new int[nplayers];
+    sleepers = new int[nplayers];
 
     thread umpire;
     umpire = thread (umpire_main);
@@ -307,7 +303,10 @@ unsigned long long musical_chairs()
     for (int i=0; i<nplayers; i++) {
         players[i].join();
     };
-	// Spawn n player threads.
+    std::unique_lock<std::mutex> all_ready_lck(all_ready_mutex);
+    all_ready = 1;
+    all_ready_lck.unlock();
+    cv1.notify_one();
     umpire.join();
     /* Add your code here */
 
