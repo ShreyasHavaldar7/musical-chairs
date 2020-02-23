@@ -149,6 +149,7 @@ void usage(int argc, char *argv[])
 
 void umpire_main()
 {
+    cout <<"Musical Chairs: "<< nplayers <<" player game with "<< nplayers-1 << " laps.\n";
     string inst; int lap_no=1;
     while(nplayers > 1) {
         m_s_mutex.lock();
@@ -239,7 +240,7 @@ void umpire_main()
         for(int i = 0;i < nplayers;i++) {
             if (isalive[i] == true) {
                 cout << "Winner :" << i << "\n";
-                break;
+                return;
             }
         }
     }
