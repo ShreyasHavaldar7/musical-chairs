@@ -10,12 +10,16 @@ List of files submitted:
 
 
 Compilation:
+
 Please compile the file matmul.c using flags pthread and lm as follows:
+
 g++ musicalchairs.cpp -O2 -std=c++11 -pthread        
 
 
 Running:
+
 Run the ./a.out (or the executable file produced) providing the required arguments:
+
 * np (No. of players playing the game)
 
 
@@ -24,73 +28,118 @@ Note: It is assumed that the no of laps in the game is one less than the number 
 Sample Outputs:
 
 * input.txt:
+
 lap_start
+
 music_start
+
 music_stop
+
 lap_stop
+
 lap_start
+
 music_start
+
 music_stop
+
 lap_stop
+
 lap_start
+
 music_start
+
 music_stop
+
 lap_stop
 
 
 COMMAND:
 ./a.out --np 4 < input.txt
 
-
 OUTPUT:
 Musical Chairs: 4 player game with 3 laps.
+
 ======= lap# 1 =======
+
 0 could not get chair
+
 **********************
 ======= lap# 2 =======
+
 3 could not get chair
+
 **********************
 ======= lap# 3 =======
+
 1 could not get chair
+
 **********************
+
 Winner is 2
+
 Time taken for the game: 496 us
 
-
 * input.txt:
+
 lap_start
+
 music_start
+
 umpire_sleep 200
+
 music_stop
-lap_stop
-lap_start
-music_start
-umpire_sleep 200000
-music_stop
-lap_stop
-lap_start
-music_start
-umpire_sleep 800000
-music_stop
+
 lap_stop
 
+lap_start
+
+music_start
+
+umpire_sleep 200000
+
+music_stop
+
+lap_stop
+
+lap_start
+
+music_start
+
+umpire_sleep 800000
+
+music_stop
+
+lap_stop
 
 COMMAND:
+
 ./a.out --np 4 < input.txt
 
-
 OUTPUT:
+
 Musical Chairs: 4 player game with 3 laps.
+
 ======= lap# 1 =======
+
 0 could not get chair
+
 **********************
+
 ======= lap# 2 =======
+
 3 could not get chair
+
 **********************
+
 ======= lap# 3 =======
+
 1 could not get chair
+
 **********************
+
 Winner is 2
+
 Time taken for the game: 1002809 us
 
 
@@ -270,7 +319,6 @@ lap_stop
 
 COMMAND:
 ./a.out --np 14 < input.txt
-
 
 OUTPUT:
 Musical Chairs: 14 player game with 13 laps.
